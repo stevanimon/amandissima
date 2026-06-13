@@ -326,12 +326,8 @@ tbody td{padding:9px 13px;font-size:0.83rem;font-weight:300;color:var(--text);ve
               <div class="form-group">
                 <label class="form-label">Selecionar *</label>
                 <div class="form-select-wrap">
-                  <select class="form-select" onchange="selectVend(this)">
+                  <select class="form-select" id="sel-vendedora" onchange="selectVend(this)">
                     <option value="">Escolha…</option>
-                    <option value="||A" selected></option>
-                    <option value="|bea@email.com|B"></option>
-                    <option value="|camila@email.com|C"></option>
-                    <option value=" Menezes|dani@email.com|D"> Menezes</option>
                   </select>
                 </div>
               </div>
@@ -346,12 +342,12 @@ tbody td{padding:9px 13px;font-size:0.83rem;font-weight:300;color:var(--text);ve
           <div class="form-card">
             <div class="form-card-hdr"><h3>Dados da Remessa</h3></div>
             <div class="form-card-body">
-              <div class="form-group"><label class="form-label">Identificação</label><input class="form-input" type="text" value="Remessa de " placeholder="Ex: Remessa de Julho"></div>
+              <div class="form-group"><label class="form-label">Identificação</label><input class="form-input" type="text" id="rem-identificacao" value="" placeholder="Ex: Remessa de Julho"></div>
               <div class="form-row">
-                <div class="form-group"><label class="form-label">Data Abertura</label><input class="form-input" type="date" value=""></div>
-                <div class="form-group"><label class="form-label">Prazo (dias)</label><input class="form-input" type="number" value="30" min="1" max="90"></div>
+                <div class="form-group"><label class="form-label">Data Abertura</label><input class="form-input" type="date" id="rem-data-abertura" value=""></div>
+                <div class="form-group"><label class="form-label">Prazo (dias)</label><input class="form-input" type="number" id="rem-prazo" value="30" min="1" max="90"></div>
               </div>
-              <div class="form-group"><label class="form-label">Observações</label><input class="form-input" type="text" placeholder="Instruções especiais…"></div>
+              <div class="form-group"><label class="form-label">Observações</label><input class="form-input" type="text" id="rem-obs" placeholder="Instruções especiais…"></div>
             </div>
           </div>
 
@@ -473,14 +469,35 @@ tbody td{padding:9px 13px;font-size:0.83rem;font-weight:300;color:var(--text);ve
 <script>
 let pecaCount=5;
 function selectVend(sel){
-  const val=sel.value;if(!val)return;
-  const[nome,email,ini]=val.split('|');
-  document.getElementById('vend-nome').textContent=nome;
-  document.getElementById('vend-email').textContent=email;
-  document.getElementById('vend-av').textContent=ini;
-  document.getElementById('footer-vend').textContent=nome;
-  document.getElementById('m-vend').textContent=nome;
+  const val=sel.value;
+  const card=document.getElementById('vend-card');
+  if(!val){ if(card) card.style.display='none'; window._vendSelecionada=null; return; }
+  const v = window._vendedorasDb.find(x=>x.id===val);
+  if(!v) return;
+  window._vendSelecionada = v;
+  document.getElementById('vend-nome').textContent=v.nome;
+  document.getElementById('vend-email').textContent=v.email;
+  document.getElementById('vend-av').textContent=(v.nome||'?')[0].toUpperCase();
+  document.getElementById('footer-vend').textContent=v.nome;
+  document.getElementById('m-vend').textContent=v.nome;
+  if(card) card.style.display='';
 }
+
+/* ── CARREGAR VENDEDORAS DO BANCO ── */
+window._vendedorasDb = [];
+async function carregarVendedoras(){
+  try{
+    const db = await dbRead();
+    window._vendedorasDb = db.vendedoras || [];
+    const sel = document.getElementById('sel-vendedora');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Escolha…</option>' +
+      window._vendedorasDb.filter(v=>v.status!=='inativa').map(v=>
+        `<option value="${v.id}">${v.nome}</option>`
+      ).join('');
+  }catch(e){ console.error('Erro ao carregar vendedoras:', e); }
+}
+document.addEventListener('DOMContentLoaded', carregarVendedoras);
 function switchImport(btn,mode){
   document.querySelectorAll('.import-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
   const isCSV=mode==='csv';
@@ -533,13 +550,88 @@ function updateResumo(){
   const mp=document.getElementById('m-pecas');const mv=document.getElementById('m-valor');
   if(mp)mp.textContent=n+' peças';if(mv)mv.textContent=vs;
 }
-function openModal(){updateResumo();document.getElementById('modal-overlay').classList.add('open');document.body.style.overflow='hidden';}
+function openModal(){
+  if(!window._vendSelecionada){ alert('Selecione uma vendedora antes de publicar.'); return; }
+  updateResumo();
+  document.getElementById('modal-overlay').classList.add('open');document.body.style.overflow='hidden';
+}
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');document.body.style.overflow='';}
-function publicarRemessa(){
-  closeModal();
-  document.getElementById('s-pecas').textContent=document.getElementById('res-pecas').textContent;
-  document.getElementById('s-valor').textContent=document.getElementById('res-valor').textContent;
-  document.getElementById('success-overlay').classList.add('show');
+
+/* ── COLETAR PEÇAS DO FORMULÁRIO ── */
+function coletarPecas(){
+  const isMobile = window.innerWidth < 768;
+  const pecas = [];
+  if(isMobile){
+    document.querySelectorAll('.peca-entry').forEach(e=>{
+      const inputs = e.querySelectorAll('input');
+      const sel = e.querySelector('select');
+      const cod = inputs[0]?.value?.trim();
+      const desc = inputs[1]?.value?.trim();
+      const valor = parseFloat((inputs[2]?.value||'0').replace(',','.'))||0;
+      const tipo = sel?.value || 'Outro';
+      if(cod && desc) pecas.push({cod, desc, tipo, valor, status:'disponivel'});
+    });
+  } else {
+    document.querySelectorAll('#pecas-tbody tr').forEach(r=>{
+      const inputs = r.querySelectorAll('input');
+      const sel = r.querySelector('select');
+      const cod = inputs[0]?.value?.trim();
+      const desc = inputs[1]?.value?.trim();
+      const valor = parseFloat((inputs[2]?.value||'0').replace(',','.'))||0;
+      const tipo = sel?.value || 'Outro';
+      if(cod && desc) pecas.push({cod, desc, tipo, valor, status:'disponivel'});
+    });
+  }
+  return pecas;
+}
+
+async function publicarRemessa(){
+  const btnConf = document.querySelector('#modal-overlay .btn-confirm');
+  if(btnConf){ btnConf.disabled=true; btnConf.textContent='Publicando…'; }
+
+  const pecas = coletarPecas();
+  if(!pecas.length){
+    alert('Adicione ao menos uma peça com código e descrição.');
+    if(btnConf){ btnConf.disabled=false; btnConf.textContent='Confirmar e Publicar'; }
+    return;
+  }
+
+  const vend = window._vendSelecionada;
+  const ident = document.getElementById('rem-identificacao')?.value?.trim() || ('Remessa de '+new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'}));
+  const dataAbertura = document.getElementById('rem-data-abertura')?.value || new Date().toISOString().split('T')[0];
+  const prazo = parseInt(document.getElementById('rem-prazo')?.value) || 30;
+  const obs = document.getElementById('rem-obs')?.value?.trim() || '';
+
+  const valorTotal = pecas.reduce((s,p)=>s+p.valor,0);
+  const remessa = {
+    id: 'REM' + Date.now(),
+    vendedoraId: vend.id,
+    vendedoraNome: vend.nome,
+    titulo: ident,
+    dataAbertura,
+    prazoDias: prazo,
+    observacoes: obs,
+    status: 'ativa',
+    pecas,
+    criadaEm: new Date().toISOString()
+  };
+
+  try{
+    const db = await dbRead();
+    db.remessas = db.remessas || [];
+    db.remessas.push(remessa);
+    await dbWrite(db);
+
+    closeModal();
+    document.getElementById('s-pecas').textContent = pecas.length+' peças';
+    document.getElementById('s-valor').textContent = 'R$ '+valorTotal.toFixed(2).replace('.',',');
+    document.getElementById('success-overlay').classList.add('show');
+  }catch(e){
+    console.error(e);
+    alert('Erro ao publicar remessa. Verifique a conexão.');
+  }finally{
+    if(btnConf){ btnConf.disabled=false; btnConf.textContent='Confirmar e Publicar'; }
+  }
 }
 updateResumo();
 window.addEventListener('resize',updateResumo);

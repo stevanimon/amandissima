@@ -344,24 +344,24 @@ tbody td{padding:12px 14px;font-size:0.84rem;font-weight:300;color:var(--text);v
 </nav>
 
 <div class="container">
-  <div class="page-header">
-    <h1>Remessa de Junho</h1>
-    <p class="meta">#REM-XXXX · 28 dias em aberto</p>
-    <span class="badge-ativa"><span class="dot"></span>Ativa</span>
+  <div class="page-header" id="page-header">
+    <h1 id="rem-titulo">Nenhuma remessa ativa</h1>
+    <p class="meta" id="rem-meta">—</p>
+    <span class="badge-ativa" id="rem-badge-status" style="display:none"><span class="dot"></span>Ativa</span>
   </div>
 
   <!-- CARDS -->
   <div class="cards-scroll">
-    <div class="card accent"><p class="card-label">Peças em posse</p><p class="card-value">18</p><p class="card-sub">de 24 totais</p></div>
-    <div class="card"><p class="card-label">Valor em posse</p><p class="card-value">R$&nbsp;4.320</p><p class="card-sub">a ser acertado</p></div>
-    <div class="card"><p class="card-label">Total vendido</p><p class="card-value">R$&nbsp;1.890</p><p class="card-sub">0 peças</p></div>
-    <div class="card dark"><p class="card-label">Pagamento Remessa</p><p class="card-value">R$&nbsp;1.323</p><p class="card-sub">após comissão 30%</p></div>
+    <div class="card accent"><p class="card-label">Peças em posse</p><p class="card-value" id="kpi-posse">0</p><p class="card-sub" id="kpi-posse-sub">de 0 totais</p></div>
+    <div class="card"><p class="card-label">Valor em posse</p><p class="card-value" id="kpi-valor-posse">R$&nbsp;0,00</p><p class="card-sub">a ser acertado</p></div>
+    <div class="card"><p class="card-label">Total vendido</p><p class="card-value" id="kpi-vendido">R$&nbsp;0,00</p><p class="card-sub" id="kpi-vendido-sub">0 peças</p></div>
+    <div class="card dark"><p class="card-label">Pagamento Remessa</p><p class="card-value" id="kpi-pagamento">R$&nbsp;0,00</p><p class="card-sub" id="kpi-comissao-sub">—</p></div>
   </div>
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab(this,'disponivel')">Disponíveis <span class="tab-count">18</span></button>
-    <button class="tab-btn" onclick="switchTab(this,'vendida')">Vendidas <span class="tab-count" style="background:var(--text-muted)">6</span></button>
+    <button class="tab-btn active" onclick="switchTab(this,'disponivel')">Disponíveis <span class="tab-count" id="tab-count-disp">0</span></button>
+    <button class="tab-btn" onclick="switchTab(this,'vendida')">Vendidas <span class="tab-count" id="tab-count-vend" style="background:var(--text-muted)">0</span></button>
     <button class="tab-btn" onclick="switchTab(this,'todas')">Todas</button>
   </div>
 
@@ -531,36 +531,7 @@ tbody td{padding:12px 14px;font-size:0.84rem;font-weight:300;color:var(--text);v
     </div>
     <div class="sheet-body">
       <div class="remessa-status-list">
-        <div class="rem-item">
-          <div class="rem-item-top"><span class="rem-item-id">REM-XXXX</span><span class="rem-badge rb-ativa">● Ativa</span></div>
-          <h4>Remessa de Junho 2024</h4>
-          <div style="font-size:0.72rem;font-weight:300;color:var(--text-muted)">Aberta em 03/06/2024 · 28 dias em aberto</div>
-          <div class="rem-stats">
-            <div><div class="rem-stat-label">Peças</div><div class="rem-stat-value">24</div></div>
-            <div><div class="rem-stat-label">Vendido</div><div class="rem-stat-value">R$ 0,00</div></div>
-            <div><div class="rem-stat-label">Pagamento</div><div class="rem-stat-value">R$ 0,00</div></div>
-          </div>
-        </div>
-        <div class="rem-item" style="opacity:0.7">
-          <div class="rem-item-top"><span class="rem-item-id">REM-XXXX</span><span class="rem-badge rb-enc">Encerrada</span></div>
-          <h4>Remessa de Maio 2024</h4>
-          <div style="font-size:0.72rem;font-weight:300;color:var(--text-muted)">Aberta 05/05 · Encerrada 02/06 · 28 dias</div>
-          <div class="rem-stats">
-            <div><div class="rem-stat-label">Peças</div><div class="rem-stat-value">20</div></div>
-            <div><div class="rem-stat-label">Vendido</div><div class="rem-stat-value">R$ 0,00</div></div>
-            <div><div class="rem-stat-label">Pago</div><div class="rem-stat-value">R$ 0,00</div></div>
-          </div>
-        </div>
-        <div class="rem-item" style="opacity:0.55">
-          <div class="rem-item-top"><span class="rem-item-id">REM-XXXX</span><span class="rem-badge rb-enc">Encerrada</span></div>
-          <h4>Remessa de Abril 2024</h4>
-          <div style="font-size:0.72rem;font-weight:300;color:var(--text-muted)">Aberta 08/04 · Encerrada 05/05 · 27 dias</div>
-          <div class="rem-stats">
-            <div><div class="rem-stat-label">Peças</div><div class="rem-stat-value">18</div></div>
-            <div><div class="rem-stat-label">Vendido</div><div class="rem-stat-value">R$ 0,00</div></div>
-            <div><div class="rem-stat-label">Pago</div><div class="rem-stat-value">R$ 0,00</div></div>
-          </div>
-        </div>
+        <p style="padding:20px;text-align:center;font-size:0.82rem;font-weight:300;color:var(--text-muted)">Nenhuma remessa registrada.</p>
       </div>
     </div>
   </div>
@@ -805,6 +776,127 @@ function setPecaImgs(container) {
   });
 }
 document.addEventListener('DOMContentLoaded', () => setPecaImgs());
+</script>
+
+<script>
+/* ── CARREGAR REMESSA ATIVA DA VENDEDORA ── */
+async function carregarRemessaAtiva(){
+  const vendedoraId = sessionStorage.getItem('vendedoraId');
+  if(!vendedoraId){
+    console.warn('Vendedora não identificada na sessão.');
+    return;
+  }
+
+  let db;
+  try{
+    db = await dbRead();
+  }catch(e){
+    console.error('Erro ao ler banco:', e);
+    return;
+  }
+
+  const remessas = (db.remessas||[]).filter(r=>r.vendedoraId===vendedoraId);
+  const ativa = remessas.find(r=>r.status==='ativa');
+
+  if(!ativa){
+    // Sem remessa ativa — mantém os zeros padrão
+    document.getElementById('rem-titulo').textContent = 'Nenhuma remessa ativa';
+    document.getElementById('rem-meta').textContent = 'Aguardando nova remessa da administradora';
+    document.getElementById('rem-badge-status').style.display = 'none';
+    document.querySelector('.btn-fechar-remessa').style.display = 'none';
+    return;
+  }
+
+  // ── Cabeçalho ──
+  document.getElementById('rem-titulo').textContent = ativa.titulo || 'Remessa';
+  const dataAb = ativa.dataAbertura ? new Date(ativa.dataAbertura+'T00:00:00') : null;
+  const diasAberto = dataAb ? Math.floor((Date.now()-dataAb.getTime())/(1000*60*60*24)) : 0;
+  document.getElementById('rem-meta').textContent = `#${ativa.id} · ${diasAberto} dias em aberto`;
+  document.getElementById('rem-badge-status').style.display = '';
+
+  // ── Peças ──
+  const pecas = ativa.pecas || [];
+  const disponiveis = pecas.filter(p=>p.status==='disponivel');
+  const vendidas = pecas.filter(p=>p.status==='vendida');
+
+  const valorPosse = disponiveis.reduce((s,p)=>s+(p.valor||0),0);
+  const totalVendido = vendidas.reduce((s,p)=>s+(p.valor||0),0);
+
+  // Comissão (padrão 30% se não configurado)
+  const comissaoPct = ativa.comissaoPct || 30;
+  const pagamento = totalVendido * (1 - comissaoPct/100);
+
+  document.getElementById('kpi-posse').textContent = disponiveis.length;
+  document.getElementById('kpi-posse-sub').textContent = `de ${pecas.length} totais`;
+  document.getElementById('kpi-valor-posse').innerHTML = 'R$&nbsp;'+valorPosse.toFixed(2).replace('.',',');
+  document.getElementById('kpi-vendido').innerHTML = 'R$&nbsp;'+totalVendido.toFixed(2).replace('.',',');
+  document.getElementById('kpi-vendido-sub').textContent = `${vendidas.length} peças`;
+  document.getElementById('kpi-pagamento').innerHTML = 'R$&nbsp;'+pagamento.toFixed(2).replace('.',',');
+  document.getElementById('kpi-comissao-sub').textContent = `após comissão ${comissaoPct}%`;
+
+  document.getElementById('tab-count-disp').textContent = disponiveis.length;
+  document.getElementById('tab-count-vend').textContent = vendidas.length;
+
+  // ── Renderizar lista de peças ──
+  renderPecasRemessa(pecas);
+
+  // ── Bottom bar ──
+  document.querySelector('.bottom-bar strong').textContent = 'R$ '+pagamento.toFixed(2).replace('.',',');
+}
+
+function renderPecasRemessa(pecas){
+  const list = document.getElementById('pecas-list');
+  const tbody = document.querySelector('.table-wrap tbody');
+  if(!pecas.length) return; // mantém mensagem "Nenhuma peça em remessa"
+
+  // Remover mensagens de vazio
+  const emptyMobile = document.getElementById('pecas-empty');
+  if(emptyMobile) emptyMobile.remove();
+
+  const tipoMap = {Anel:'anel',Brinco:'brinco',Colar:'colar',Pulseira:'pulseira',Outro:'outro'};
+
+  // Mobile cards
+  list.innerHTML = pecas.map(p=>{
+    const tipoKey = tipoMap[p.tipo] || 'outro';
+    const isVendida = p.status==='vendida';
+    return `
+    <div class="peca-card" data-status="${p.status}" data-tipo="${tipoKey}" data-cod="${p.cod}" data-desc="${p.desc}" data-valor="${p.valor}">
+      <div class="peca-card-top">
+        ${isVendida ? '' : '<div class="peca-checkbox" onclick="toggleCheck(this)"></div>'}
+        <div class="peca-img-wrap">
+          <img class="peca-img" src="imagens/${p.cod}.png"
+               onerror="this.onerror=null;this.src='imagens/${p.cod}.jpg'"
+               alt="foto">
+        </div>
+        <div class="peca-info"><strong>${p.desc}</strong><span>${p.cod}</span></div>
+        <span class="peca-valor">R$ ${(p.valor||0).toFixed(2).replace('.',',')}</span>
+      </div>
+      <div class="peca-card-bottom">
+        <div style="display:flex;gap:6px"><span class="badge-tipo">${p.tipo}</span><span class="${isVendida?'badge-vend':'badge-disp'}">${isVendida?'Vendida':'Disponível'}</span></div>
+        ${isVendida ? '<button class="btn-ver">Ver Venda</button>' : '<button class="btn-vender" onclick="openVendaSimples(this)">Vender</button>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Desktop table
+  if(tbody){
+    tbody.innerHTML = pecas.map(p=>{
+      const tipoKey = tipoMap[p.tipo] || 'outro';
+      const isVendida = p.status==='vendida';
+      return `
+      <tr data-status="${p.status}" data-tipo="${tipoKey}" data-cod="${p.cod}" data-desc="${p.desc}" data-valor="${p.valor}">
+        <td>${isVendida?'':'<div class="td-check" onclick="toggleCheckDesk(this)"></div>'}</td>
+        <td><div class="td-foto"><img class="peca-img" src="imagens/${p.cod}.png" onerror="this.onerror=null;this.src='imagens/${p.cod}.jpg'" style="width:100%;height:100%;object-fit:cover" alt=""></div></td>
+        <td class="td-code">${p.cod}</td><td class="td-desc"><strong>${p.desc}</strong></td>
+        <td><span class="badge-tipo">${p.tipo}</span></td><td class="td-valor">R$ ${(p.valor||0).toFixed(2).replace('.',',')}</td>
+        <td><span class="${isVendida?'badge-vend':'badge-disp'}">${isVendida?'Vendida':'Disponível'}</span></td>
+        <td>${isVendida?'<button class="btn-ver">Ver Venda</button>':'<button class="btn-vender" onclick="openVendaSimples(this)">Registrar Venda</button>'}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', carregarRemessaAtiva);
 </script>
 </body>
 </html>
