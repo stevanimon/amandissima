@@ -472,7 +472,7 @@ tbody td{padding:12px 14px;font-size:0.84rem;font-weight:300;color:var(--text);v
     </div>
     <div class="sheet-footer">
       <button class="btn-cancel" onclick="closeSheet('sheet-venda')">Cancelar</button>
-      <button class="btn-confirm">Confirmar Venda</button>
+      <button class="btn-confirm" onclick="confirmarVenda()">Confirmar Venda</button>
     </div>
   </div>
 </div>
@@ -487,7 +487,7 @@ tbody td{padding:12px 14px;font-size:0.84rem;font-weight:300;color:var(--text);v
     </div>
     <div class="sheet-body">
       <div class="info-box"><p>Na primeira vez que acessar, a administradora forneceu uma <strong>senha provisória</strong>. Altere para uma senha pessoal e segura.</p></div>
-      <div class="form-group"><label class="form-label">Senha Atual</label><input class="form-input" type="password" placeholder="Sua senha atual"></div>
+      <div class="form-group"><label class="form-label">Senha Atual</label><input class="form-input" type="password" id="senha-atual" placeholder="Sua senha atual"></div>
       <div class="form-group"><label class="form-label">Nova Senha</label><input class="form-input" type="password" id="nova-senha" placeholder="Mínimo 6 caracteres"></div>
       <div class="form-group"><label class="form-label">Confirmar Nova Senha</label><input class="form-input" type="password" id="conf-senha" placeholder="Repita a nova senha"></div>
     </div>
@@ -617,6 +617,89 @@ function openVendaMultipla(){
   openVendaSheet();
 }
 
+/* ── CONFIRMAR VENDA ── */
+async function confirmarVenda(){
+  if(!selectedPecas.length){
+    mostrarToastVend('Nenhuma peça selecionada.', true);
+    return;
+  }
+
+  const clienteNome = document.getElementById('cliente-input').value.trim();
+  const clienteTel = document.getElementById('cliente-tel').value.trim();
+  const valorTotal = parseFloat((document.getElementById('venda-valor-input').value||'0').replace(',','.'))||0;
+  const dataVenda = document.getElementById('venda-data').value || new Date().toISOString().split('T')[0];
+  const formaPagto = document.getElementById('forma-pagto').value;
+  const statusPagto = document.getElementById('status-pagto').value;
+
+  if(!clienteNome){ mostrarToastVend('Informe o nome da cliente.', true); return; }
+  if(!formaPagto){ mostrarToastVend('Selecione a forma de pagamento.', true); return; }
+
+  const btn = document.querySelector('#sheet-venda .btn-confirm');
+  if(btn){btn.disabled=true;btn.textContent='Salvando…';}
+
+  try{
+    const db = await dbRead();
+    const remessas = db.remessas || [];
+    const remessa = remessas.find(r=>r.id === window._remessaAtiva?.id);
+    if(!remessa){ mostrarToastVend('Remessa não encontrada.', true); return; }
+
+    // Marcar peças como vendidas
+    const codsVendidos = selectedPecas.map(p=>p.cod);
+    remessa.pecas.forEach(p=>{
+      if(codsVendidos.includes(p.cod)){
+        p.status = 'vendida';
+        p.cliente = clienteNome;
+        p.clienteTel = clienteTel;
+        p.formaPagamento = formaPagto;
+        p.statusPagamento = statusPagto;
+        p.dataVenda = dataVenda;
+      }
+    });
+
+    // Registrar venda no histórico
+    db.vendas = db.vendas || [];
+    db.vendas.push({
+      id: 'V'+Date.now(),
+      remessaId: remessa.id,
+      vendedoraId: remessa.vendedoraId,
+      vendedoraNome: remessa.vendedoraNome,
+      cliente: clienteNome,
+      clienteTel: clienteTel,
+      pecas: selectedPecas.map(p=>({cod:p.cod, desc:p.desc, valor:p.valor})),
+      valorTotal,
+      formaPagamento: formaPagto,
+      statusPagamento: statusPagto,
+      data: dataVenda,
+      criadaEm: new Date().toISOString()
+    });
+
+    // Registrar/atualizar cliente
+    db.clientes = db.clientes || [];
+    let cli = db.clientes.find(c=>c.nome.toLowerCase()===clienteNome.toLowerCase());
+    if(!cli){
+      cli = {id:'C'+Date.now(), nome:clienteNome, tel:clienteTel};
+      db.clientes.push(cli);
+    }
+
+    await dbWrite(db);
+
+    closeSheet('sheet-venda');
+    selectedPecas = [];
+    document.getElementById('cliente-input').value='';
+    document.getElementById('cliente-tel').value='';
+    mostrarToastVend('Venda registrada com sucesso!');
+
+    // Recarregar dados
+    carregarRemessaAtiva();
+
+  }catch(e){
+    console.error(e);
+    mostrarToastVend('Erro ao salvar venda. Verifique a conexão.', true);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Confirmar Venda';}
+  }
+}
+
 function openVendaSheet(){
   const list = document.getElementById('peca-sel-list');
   list.innerHTML = selectedPecas.map(p=>`
@@ -694,17 +777,55 @@ function cadastrarCliente(){
 }
 
 // ── MUDAR SENHA ──
-function salvarSenha(){
+async function salvarSenha(){
+  const atual = document.getElementById('senha-atual').value;
   const nova = document.getElementById('nova-senha').value;
   const conf = document.getElementById('conf-senha').value;
   if(nova.length<6){alert('A senha deve ter pelo menos 6 caracteres');return;}
   if(nova!==conf){alert('As senhas não conferem');return;}
-  closeSheet('sheet-senha');
+
+  const vendedoraId = sessionStorage.getItem('vendedoraId');
+  if(!vendedoraId){alert('Sessão inválida. Faça login novamente.');return;}
+
+  const btn = document.querySelector('#sheet-senha .btn-confirm');
+  if(btn){btn.disabled=true;btn.textContent='Salvando…';}
+
+  try{
+    const db = await dbRead();
+    const vendedoras = db.vendedoras || [];
+    const idx = vendedoras.findIndex(v=>v.id===vendedoraId);
+    if(idx===-1){alert('Vendedora não encontrada.');return;}
+
+    if(atual && vendedoras[idx].senha !== atual){
+      mostrarToastVend('Senha atual incorreta.', true);
+      return;
+    }
+
+    vendedoras[idx].senha = nova;
+    db.vendedoras = vendedoras;
+    await dbWrite(db);
+
+    closeSheet('sheet-senha');
+    document.getElementById('senha-atual').value='';
+    document.getElementById('nova-senha').value='';
+    document.getElementById('conf-senha').value='';
+    mostrarToastVend('Senha alterada com sucesso!');
+  }catch(e){
+    console.error(e);
+    mostrarToastVend('Erro ao salvar. Verifique a conexão.', true);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Salvar Senha';}
+  }
+}
+
+function mostrarToastVend(msg, isErro){
   const toast=document.createElement('div');
-  toast.style.cssText='position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:var(--navy-deep);color:var(--champ-light);padding:10px 20px;font-family:var(--font-body);font-size:0.75rem;font-weight:500;letter-spacing:0.08em;border:1px solid var(--border-champ);z-index:999;';
-  toast.textContent='Senha alterada com sucesso!';
+  toast.style.cssText='position:fixed;bottom:120px;left:50%;transform:translateX(-50%);'+
+    (isErro?'background:#B43C28;color:#fff;border:1px solid rgba(255,255,255,0.25);':'background:var(--navy-deep);color:var(--champ-light);border:1px solid var(--border-champ);')+
+    'padding:10px 20px;font-family:var(--font-body);font-size:0.75rem;font-weight:500;letter-spacing:0.08em;z-index:999;max-width:90vw;text-align:center';
+  toast.textContent=msg;
   document.body.appendChild(toast);
-  setTimeout(()=>toast.remove(),2500);
+  setTimeout(()=>toast.remove(),2800);
 }
 
 // ── FILTROS ──
@@ -797,6 +918,8 @@ async function carregarRemessaAtiva(){
 
   const remessas = (db.remessas||[]).filter(r=>r.vendedoraId===vendedoraId);
   const ativa = remessas.find(r=>r.status==='ativa');
+
+  window._remessaAtiva = ativa || null;
 
   if(!ativa){
     // Sem remessa ativa — mantém os zeros padrão

@@ -305,9 +305,9 @@ tbody td.r{text-align:right}
       <div class="gcard"><p class="gc-label">Vendido (mês)</p><p class="gc-value" id="kpi-vendido">—</p><p class="gc-sub" id="kpi-vendido-sub">—</p><span class="gc-delta" id="kpi-vendido-delta" style="display:none"></span></div>
       <div class="gcard dark">
         <p class="gc-label">A Receber (líquido)</p>
-        <p class="gc-value">—</p>
+        <p class="gc-value" id="kpi-receber">—</p>
         <p class="gc-sub">após comissões variáveis</p>
-        <span class="gc-delta d-warn">—</span>
+        <span class="gc-delta d-warn" id="kpi-pendentes" style="display:none"></span>
       </div>
     </div>
 
@@ -340,7 +340,9 @@ tbody td.r{text-align:right}
 
     <!-- MOBILE CARDS -->
     <div id="vcards">
-      
+      <p style="padding:20px;font-size:0.82rem;font-weight:300;color:var(--text-muted)">Carregando…</p>
+    </div>
+  </div>
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
@@ -359,18 +361,119 @@ function setChip(btn,s){
     c.style.display=show?'':'none';
   });
 }
-function openDrawer('','','','','','','Ativa'){
-  document.getElementById('dr-nome').textContent=nome;
-  document.getElementById('dr-email').textContent=email+' · '+rem;
-  document.getElementById('dr-vend').textContent=vend;
-  document.getElementById('dr-rec').textContent=rec;
-  document.getElementById('dr-meta').textContent=meta;
-  document.getElementById('dr-status').textContent=status;
+function openDrawer(nome,email,rem,vend,rec,meta,status){
+  document.getElementById('dr-nome').textContent=nome||'';
+  document.getElementById('dr-email').textContent=(email||'')+' · '+(rem||'');
+  document.getElementById('dr-vend').textContent=vend||'';
+  document.getElementById('dr-rec').textContent=rec||'';
+  document.getElementById('dr-meta').textContent=meta||'';
+  document.getElementById('dr-status').textContent=status||'';
   document.getElementById('drawer-overlay').classList.add('open');
   document.body.style.overflow='hidden';
 }
 function closeDrawer(){document.getElementById('drawer-overlay').classList.remove('open');document.body.style.overflow='';}
 function closeDrawerOutside(e){if(e.target===document.getElementById('drawer-overlay'))closeDrawer();}
+</script>
+
+<script>
+/* ── CARREGAR DADOS REAIS DO DASHBOARD ── */
+async function carregarDashboard(){
+  let db;
+  try{
+    db = await dbRead();
+  }catch(e){
+    console.error('Erro ao ler banco:', e);
+    document.getElementById('vcards').innerHTML = '<p style="padding:20px;font-size:0.82rem;font-weight:300;color:var(--text-muted)">Erro ao conectar com o banco de dados.</p>';
+    return;
+  }
+
+  const vendedoras = db.vendedoras || [];
+  const remessas = db.remessas || [];
+  const vendas = db.vendas || [];
+
+  const vendedorasAtivas = vendedoras.filter(v=>v.status!=='inativa');
+  const remessasAtivas = remessas.filter(r=>r.status==='ativa');
+
+  // ── KPI: Vendedoras Ativas ──
+  document.getElementById('kpi-ativas').textContent = vendedorasAtivas.length;
+  document.getElementById('kpi-ativas-sub').textContent = `de ${vendedoras.length} cadastradas`;
+
+  // ── KPI: Total em Campo (valor de peças disponíveis em remessas ativas) ──
+  let totalCampo = 0, totalPecasCampo = 0;
+  remessasAtivas.forEach(r=>{
+    (r.pecas||[]).forEach(p=>{
+      if(p.status==='disponivel'){ totalCampo += (p.valor||0); totalPecasCampo++; }
+    });
+  });
+  document.getElementById('kpi-campo').innerHTML = 'R$&nbsp;'+totalCampo.toFixed(2).replace('.',',');
+
+  // ── KPI: Vendido (mês atual) ──
+  const hoje = new Date();
+  const mesAtual = hoje.getMonth(), anoAtual = hoje.getFullYear();
+  const vendasMes = vendas.filter(v=>{
+    const d = new Date(v.data+'T00:00:00');
+    return d.getMonth()===mesAtual && d.getFullYear()===anoAtual;
+  });
+  const totalVendidoMes = vendasMes.reduce((s,v)=>s+(v.valorTotal||0),0);
+  document.getElementById('kpi-vendido').innerHTML = 'R$&nbsp;'+totalVendidoMes.toFixed(2).replace('.',',');
+  const nomeMes = hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('kpi-vendido-sub').textContent = nomeMes;
+
+  // ── KPI: A Receber (líquido, após comissão) ──
+  let aReceber = 0;
+  const pendentes = vendas.filter(v=>v.statusPagamento==='prazo');
+  vendas.forEach(v=>{
+    const remessa = remessas.find(r=>r.id===v.remessaId);
+    const comissaoPct = remessa?.comissaoPct || 30;
+    aReceber += (v.valorTotal||0) * (1 - comissaoPct/100);
+  });
+  document.getElementById('kpi-receber').innerHTML = 'R$&nbsp;'+aReceber.toFixed(2).replace('.',',');
+  if(pendentes.length){
+    const pendEl = document.getElementById('kpi-pendentes');
+    pendEl.textContent = `${pendentes.length} venda${pendentes.length>1?'s':''} a prazo`;
+    pendEl.style.display = '';
+  }
+
+  // ── Remessas em Andamento (cards) ──
+  const vcards = document.getElementById('vcards');
+  if(!remessasAtivas.length){
+    vcards.innerHTML = '<p style="padding:20px;font-size:0.82rem;font-weight:300;color:var(--text-muted)">Nenhuma remessa ativa no momento.</p>';
+    return;
+  }
+
+  vcards.innerHTML = remessasAtivas.map(r=>{
+    const pecas = r.pecas||[];
+    const disponiveis = pecas.filter(p=>p.status==='disponivel');
+    const vendidas = pecas.filter(p=>p.status==='vendida');
+    const valorVendido = vendidas.reduce((s,p)=>s+(p.valor||0),0);
+    const comissaoPct = r.comissaoPct || 30;
+    const pagamento = valorVendido * (1 - comissaoPct/100);
+    const dataAb = r.dataAbertura ? new Date(r.dataAbertura+'T00:00:00') : null;
+    const diasAberto = dataAb ? Math.floor((Date.now()-dataAb.getTime())/(1000*60*60*24)) : 0;
+    const prazo = r.prazoDias || 30;
+    const status = diasAberto > prazo ? 'alerta' : 'ativa';
+    const statusLabel = diasAberto > prazo ? '⚠ Atrasada' : '● Ativa';
+
+    return `
+    <div class="vcard" data-status="${status}" onclick="openDrawer('${r.vendedoraNome}','${r.id}','${r.titulo}','R\$ ${valorVendido.toFixed(2).replace('.',',')}','R\$ ${pagamento.toFixed(2).replace('.',',')}','${diasAberto} dias','${statusLabel}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <strong style="font-size:0.92rem">${r.vendedoraNome}</strong>
+          <p style="font-size:0.72rem;color:var(--text-muted);font-weight:300;margin-top:2px">${r.titulo} · #${r.id}</p>
+        </div>
+        <span class="badge-${status==='alerta'?'atr':'ativa'}" style="font-size:0.6rem;padding:3px 8px">${statusLabel}</span>
+      </div>
+      <div style="display:flex;gap:16px;font-size:0.78rem;color:var(--text-muted);font-weight:300">
+        <span><strong style="color:var(--navy)">${disponiveis.length}</strong> em posse</span>
+        <span><strong style="color:var(--navy)">${vendidas.length}</strong> vendidas</span>
+        <span><strong style="color:var(--navy)">R$ ${valorVendido.toFixed(2).replace('.',',')}</strong></span>
+        <span>${diasAberto} dias</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', carregarDashboard);
 </script>
 </body>
 </html>
